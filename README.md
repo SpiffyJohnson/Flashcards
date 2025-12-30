@@ -1,2 +1,2 @@
 # Flashcards
-A small flashcard program that pulls from text files and allows users to select which lines are being tested on.
+A small flashcard program that pulls data from text files. It allows the user to select which lines of the text file are being tested on.
