@@ -1,4 +1,10 @@
+from pathlib import Path
 import tkinter as tk
+from tkinter import filedialog
+import os
+
+FILES_PATH = os.path.join(Path(__file__).parent, "data", "")
+SYSTEM_PATH = os.path.join(Path(__file__).parent, "system", "")
 
 rootTitle = "Flashcards"
 rootX = 400
@@ -6,12 +12,22 @@ rootY = 400
 rootSize = f"{rootX}x{rootY}"
 rootBGColor = "#333"
 rootFGColor = "#BBB"
-font = ("Times New Roman", 21, "bold")
+rootDimFGColor = "#555"
+font = ("Times New Roman", 20, "bold")
 smallFont = ("Times New Roman", 11, "bold")
+tinyFont = ("Times New Roman", 8, "bold")
+
+global testingData
+testingData = []
+global delimiter
+delimiter = " : "
+savedPath = ""
+
 
 global currentFrame
 currentFrame = 0
 
+# Checks if data exists for continuing, and forces entry of a new target file and delimiter if it does not.
 def IntroFrame():
     global currentFrame
     currentFrame = 0
@@ -19,20 +35,28 @@ def IntroFrame():
     frame = tk.Frame(root, bg=rootBGColor, height=rootY)
     frame.pack()
 
-    introLabel = tk.Label(frame, text="Welcome!", bg=rootBGColor, fg=rootFGColor, font=font)
+    introLabel = tk.Label(frame, text="F L A S H C A R D S", bg=rootBGColor, fg=rootFGColor, font=font)
     introLabel.pack(pady=100, padx=78)
 
-    introButton = tk.Button(frame, text="Next", bg=rootBGColor, fg=rootFGColor, command=ChangeFrame)
-    introButton.pack()
+    introButton = tk.Button(frame, text="New", bg=rootBGColor, fg=rootFGColor, command=lambda: SetFrame(2))
+    introButton.pack(pady=10)
 
+    continueButton = tk.Button(frame, state=tk.DISABLED, text="Continue", bg=rootBGColor, fg=rootFGColor, highlightthickness=0, command=lambda: SetFrame(1)) 
+    continueButton.pack()
+
+    VerifyContinue(continueButton)
+
+# Runs through existing flashcards until the end has been reached, at which point it will transfer to the end screen.
 def FlashcardFrame():
+    global testingData
+
     frame = tk.Frame(root, bg=rootBGColor, height=rootY)
     frame.pack()
 
-    settingsButton = tk.Button(frame, text="Settings", bg=rootBGColor, fg=rootFGColor, command=ChangeFrame)
-    settingsButton.pack()
+    titleButton = tk.Button(frame, text="Back", bg=rootBGColor, fg=rootFGColor, command=lambda: SetFrame(0))
+    titleButton.pack()
 
-    introLabel = tk.Label(frame, text="---", bg=rootBGColor, fg=rootFGColor, font=font)
+    introLabel = tk.Label(frame, text=testingData[0][0], bg=rootBGColor, fg=rootFGColor, font=font)
     introLabel.pack(pady=100, padx=78)
 
     answerLabel = tk.Label(frame, text=" ", bg=rootBGColor, fg=rootFGColor, font=font)
@@ -41,43 +65,242 @@ def FlashcardFrame():
     instructionLabel = tk.Label(frame, text="Press LEFT if correct, or RIGHT if incorrect", bg=rootBGColor, fg=rootFGColor, font=smallFont)
     instructionLabel.pack(pady=3)
 
-    root.bind("<Return>", lambda event: ShowAnswer(answerLabel))
+    root.bind("<Return>", lambda e: ShowAnswer(answerLabel))
 
-def SettingsFrame():
-    frame = tk.Frame(root, bg=rootBGColor)
-    frame.pack()
+# Runs through existing flashcards until the end has been reached, at which point it will transfer to the end screen.
+def SetupFrame():
+    frame = tk.Frame(root, bg=rootBGColor, height=rootY)
+    frame.pack(fill="x")
 
-    introLabel = tk.Label(frame, text="Settings page", bg=rootBGColor, fg=rootFGColor)
-    introLabel.pack()
+    titleButton = tk.Button(frame, text="Back", bg=rootBGColor, fg=rootFGColor, command=lambda: SetFrame(0))
+    titleButton.pack()
 
-    introButton = tk.Button(frame, text="Next", bg=rootBGColor, fg=rootFGColor, command=ChangeFrame)
-    introButton.pack()
+    tk.Label(frame, bg=rootBGColor, height=rootY, width=rootX).pack(fill="both") # Guarantee visibility of items being placed in the frame
 
-def ChangeFrame():
-    global currentFrame
+    pathErrorLabel = tk.Label(frame, text="", bg=rootBGColor, fg="#FF0000", font=smallFont)
+    pathErrorLabel.place(x=20, y=80)
+
+    pathLabel = tk.Label(frame, text="File path: ", bg=rootBGColor, fg=rootFGColor, font=smallFont)
+    pathLabel.place(x=20, y=40)
+
+    def ValidateFile(value):
+        if os.path.exists(value) and value.endswith(".txt"):
+            with open(value) as file:
+                data = file.readlines()
+                if len(data) == 0:
+                    pathErrorLabel.config(text="File is empty")
+                    SetExampleLineText("---")
+                    delimiterEntry.config(state=tk.DISABLED, highlightthickness=0)
+                    delimiterLabel.config(fg=rootDimFGColor)
+                else: # The file is usable
+                    pathErrorLabel.config(text="")
+                    SetExampleLineText(data[0].replace('\n', ''))
+                    delimiterEntry.config(state=tk.NORMAL, highlightthickness=1)
+                    delimiterLabel.config(fg=rootFGColor)
+        else:
+            if value != "": pathErrorLabel.config(text="Invalid file path")
+            else: pathErrorLabel.config(text="")
+            SetExampleLineText("---")
+            delimiterEntry.config(state=tk.DISABLED, highlightthickness=0)
+            delimiterLabel.config(fg=rootDimFGColor)
+        return True
     
-    if currentFrame == 0:
-        currentFrame += 1
-        ClearFrame()
-        FlashcardFrame()
-    elif currentFrame == 1:
-        currentFrame += 1
-        ClearFrame()
-        SettingsFrame()
-    elif currentFrame == 2:
-        currentFrame = 0
+    vcmd = (frame.register(ValidateFile), '%P')
+
+    pathEntry = tk.Entry(frame, bg=rootBGColor, fg=rootFGColor, font=smallFont, width=28)
+    pathEntry.config(validate='key', validatecommand=vcmd)
+    pathEntry.place(x=90, y=40)
+
+    def BrowseForFile():
+        path = filedialog.askopenfilename(title="Select a list:", filetypes=[("Text Files", "*.txt")])
+        if path != None and path != '':
+            pathEntry.delete(0, tk.END)
+            pathEntry.insert(0, path)
+
+    pathButton = tk.Button(frame, bg=rootBGColor, text="Browse", fg=rootFGColor, font=smallFont, pady=-2, command=BrowseForFile)
+    pathButton.place(x=294, y=40)
+
+    def SetExampleLineText(text):
+        exampleLine.config(state=tk.NORMAL)
+        exampleLine.delete("1.0", tk.END)
+        exampleLine.insert("1.0", text)
+        exampleLine.tag_configure("justify", justify="center")
+        exampleLine.tag_add("justify", "1.0", "end")
+        exampleLine.config(state=tk.DISABLED)
+
+    exampleLineText = tk.Label(frame, text="Example data", width=35, justify="center", bg=rootBGColor, fg=rootFGColor)
+    exampleLineText.place(y=100, x=60)
+
+    exampleLine = tk.Text(frame, state=tk.NORMAL, width=54, height=1, wrap=None, font=tinyFont)
+    SetExampleLineText("---")
+    
+    exampleLine.config(state=tk.DISABLED)
+    exampleLine.place(y=130, x=60)
+
+    delimiterLabel = tk.Label(frame, text="Delimiter/Separator: ", bg=rootBGColor, fg=rootDimFGColor, font=smallFont)
+    delimiterLabel.place(x=20, y=200)
+
+    def ColorDelimiter(input):
+        exampleLine.tag_delete("colorTag")
+
+        if input.upper() == "TAB": input = "	"
+
+        string = exampleLine.get('1.0', 'end-1c')
+        substring = input
+        
+        positions = [i for i in range(len(string)) if string.startswith(substring, i)]
+
+        for position in positions:
+            exampleLine.tag_add("colorTag", f"1.{position}", f"1.{position + len(substring)}")
+        exampleLine.tag_config("colorTag", background="lightgreen")
+
+        if (string == ""): exampleLine.tag_delete("colorTag")
+        ValidateDelimiter(input)
+        return True
+    
+    def ValidateDelimiter(currentDelimiter):
+        if currentDelimiter == "": 
+            delimiterErrorLabel.config(text="")
+            quizOnEntry.config(state=tk.DISABLED, highlightthickness=0)
+            quizOnLabel.config(fg=rootDimFGColor)
+            answerEntry.config(state=tk.DISABLED, highlightthickness=0)
+            answerLabel.config(fg=rootDimFGColor)
+            return
+        data = OpenDataFile(pathEntry.get())
+        splitData = SplitData(data, currentDelimiter)
+        if VerifyColumnCount(splitData):
+            delimiterErrorLabel.config(text="")
+            quizOnEntry.config(state=tk.NORMAL, highlightthickness=1)
+            quizOnLabel.config(fg=rootFGColor)
+            answerEntry.config(state=tk.NORMAL, highlightthickness=1)
+            answerLabel.config(fg=rootFGColor)
+        else:
+            delimiterErrorLabel.config(text="Unequal number of columns in all rows")
+            quizOnEntry.config(state=tk.DISABLED, highlightthickness=0)
+            quizOnLabel.config(fg=rootDimFGColor)
+            answerEntry.config(state=tk.DISABLED, highlightthickness=0)
+            answerLabel.config(fg=rootDimFGColor)
+
+    delimiterVal = (frame.register(ColorDelimiter), '%P')
+
+    delimiterEntry = tk.Entry(frame, bg=rootBGColor, fg=rootFGColor, font=smallFont, width=8, disabledbackground=rootBGColor)
+    delimiterEntry.config(validate='key', validatecommand=delimiterVal, state=tk.DISABLED, highlightthickness=0)
+    delimiterEntry.place(x=170, y=200)
+
+    delimiterErrorLabel = tk.Label(frame, text="", bg=rootBGColor, fg="#FF0000", font=smallFont)
+    delimiterErrorLabel.place(x=20, y=220)
+
+    quizOnLabel = tk.Label(frame, text="Column to quiz on: ", bg=rootBGColor, fg=rootDimFGColor, font=smallFont)
+    quizOnLabel.place(x=20, y=240)
+
+    def ColorQuizOn(tagToModify, color, input):
+        exampleArray = exampleLine.get('1.0', 'end-1c').split(delimiterEntry.get())
+
+        if not input.isdigit(): return False
+        elif input == None: return True
+
+        inputNum = int(input) - 1
+        if inputNum < 0: inputNum = 0
+        elif inputNum > len(exampleArray) - 1: inputNum = len(exampleArray) - 1
+
+        exampleLine.tag_delete(tagToModify)
+
+        
+        tempString = ""
+        for i in range(0, inputNum):
+            tempString += exampleArray[i] + delimiterEntry.get()
+            print(len(tempString))
+
+        exampleLine.tag_add(tagToModify, f"1.{len(tempString)}", f"1.{len(tempString) + len(exampleArray[inputNum])}")
+        exampleLine.tag_config(tagToModify, background=color)
+
+        return True
+
+    quizOnVal = (frame.register(lambda P: ColorQuizOn("quiz", "pink", P)), '%P')
+
+    quizOnEntry = tk.Entry(frame, bg=rootBGColor, fg=rootFGColor, font=smallFont, width=8, disabledbackground=rootBGColor)
+    quizOnEntry.config(validate='key', validatecommand=quizOnVal, state=tk.DISABLED, highlightthickness=0)
+    quizOnEntry.place(x=170, y=240)
+
+    answerLabel = tk.Label(frame, text="Answer column: ", bg=rootBGColor, fg=rootDimFGColor, font=smallFont)
+    answerLabel.place(x=20, y=280)
+
+    answerVal = (frame.register(lambda P: ColorQuizOn("answer", "lightblue", P)), '%P')
+
+    answerEntry = tk.Entry(frame, bg=rootBGColor, fg=rootFGColor, font=smallFont, width=8, disabledbackground=rootBGColor)
+    answerEntry.config(validate='key', validatecommand=answerVal, state=tk.DISABLED, highlightthickness=0)
+    answerEntry.place(x=170, y=280)
+
+
+def SetFrame(target):
+    global currentFrame
+    currentFrame = target
+
+    # Intro/Title
+    if target == 0:
         ClearFrame()
         IntroFrame()
+        root.unbind("<Return>")
+    # Flashcards
+    elif target == 1:
+        ClearFrame()
+        FlashcardFrame()
+    elif target == 2:
+        ClearFrame()
+        SetupFrame()
+        root.unbind("<Return>")
 
 # Clear the screen, allowing new widgets to be created.
 def ClearFrame():
     for child in root.winfo_children():
         child.destroy()
 
+# Show the correct answer and await the user's determination.
 def ShowAnswer(labelToFill, event=None):
-    labelToFill.config(text="Success!")
-        
+    global testingData
+    labelToFill.config(text=testingData[0][1])
 
+# ------------------------------------------------------------------------------------------------------------------------
+
+# Check upon open whether there is save data; if there is none, do not permit continuing.
+def VerifyContinue(widget):
+    global testingData
+    global delimiter
+
+    data = OpenDataFile(SYSTEM_PATH + "save.txt")
+    if data != None:
+        splitData = SplitData(data, delimiter)
+        if (VerifyColumnCount(splitData)):
+            testingData = splitData
+            widget.config(state=tk.NORMAL, highlightthickness=1)
+
+# Open the data file (if it exists) and return the lines of data as an array (if the data exists)
+def OpenDataFile(path):
+    file = open(path, 'r', encoding='utf-8')
+    data = file.readlines()
+    file.close()
+    return data
+        
+def SplitData(array, delimiter):
+    data = []
+    for line in array:
+        data.append(line.split(delimiter))
+    return data
+
+# Make certain that there is an equal number of columns in a text file.
+def VerifyColumnCount(array):
+    isValid = True
+    try:
+        targetLineCount = len(array[0])
+        if targetLineCount < 2: isValid = False
+        for line in array:
+            if len(line) != targetLineCount:
+                isValid = False
+        return isValid
+    except:
+        return False
+    
+# ------------------------------------------------------------------------------------------------------------------------
 
 root = tk.Tk()
 root.title(rootTitle)
