@@ -161,25 +161,32 @@ def SetupFrame():
     def ValidateDelimiter(currentDelimiter):
         if currentDelimiter == "": 
             delimiterErrorLabel.config(text="")
-            quizOnEntry.config(state=tk.DISABLED, highlightthickness=0)
+            quizOnSpinbox.config(state=tk.DISABLED, highlightthickness=0)
             quizOnLabel.config(fg=rootDimFGColor)
-            answerEntry.config(state=tk.DISABLED, highlightthickness=0)
+            answerSpinbox.config(state=tk.DISABLED, highlightthickness=0)
             answerLabel.config(fg=rootDimFGColor)
+            submitButton.config(state=tk.DISABLED, highlightthickness=0)
             return
         data = OpenDataFile(pathEntry.get())
         splitData = SplitData(data, currentDelimiter)
         if VerifyColumnCount(splitData):
             delimiterErrorLabel.config(text="")
-            quizOnEntry.config(state=tk.NORMAL, highlightthickness=1)
+            quizOnSpinbox.config(state=tk.NORMAL, highlightthickness=1)
             quizOnLabel.config(fg=rootFGColor)
-            answerEntry.config(state=tk.NORMAL, highlightthickness=1)
+            answerSpinbox.config(state=tk.NORMAL, highlightthickness=1)
             answerLabel.config(fg=rootFGColor)
+            quizOnSpinbox.config(from_=1, to=len(splitData[0]))
+            answerSpinbox.config(from_=1, to=len(splitData[0]))
+            submitButton.config(state=tk.NORMAL, highlightthickness=1)
         else:
             delimiterErrorLabel.config(text="Unequal number of columns in all rows")
-            quizOnEntry.config(state=tk.DISABLED, highlightthickness=0)
+            quizOnSpinbox.config(state=tk.DISABLED, highlightthickness=0)
             quizOnLabel.config(fg=rootDimFGColor)
-            answerEntry.config(state=tk.DISABLED, highlightthickness=0)
+            answerSpinbox.config(state=tk.DISABLED, highlightthickness=0)
             answerLabel.config(fg=rootDimFGColor)
+            submitButton.config(state=tk.DISABLED, highlightthickness=0)
+            exampleLine.tag_delete("quiz")
+            exampleLine.tag_delete("answer")
 
     delimiterVal = (frame.register(ColorDelimiter), '%P')
 
@@ -193,43 +200,42 @@ def SetupFrame():
     quizOnLabel = tk.Label(frame, text="Column to quiz on: ", bg=rootBGColor, fg=rootDimFGColor, font=smallFont)
     quizOnLabel.place(x=20, y=240)
 
-    def ColorQuizOn(tagToModify, color, input):
-        exampleArray = exampleLine.get('1.0', 'end-1c').split(delimiterEntry.get())
-
-        if not input.isdigit(): return False
-        elif input == None: return True
-
+    def ColValidate(tagToModify, color, input):
+        if not input.isdigit() or int(input) < 1 or int(input) > len(exampleLine.get("1.0", tk.END).split(delimiterEntry.get())): 
+            return False
+        
         inputNum = int(input) - 1
-        if inputNum < 0: inputNum = 0
-        elif inputNum > len(exampleArray) - 1: inputNum = len(exampleArray) - 1
+        exampleArray = exampleLine.get('1.0', 'end-1c').split(delimiterEntry.get())
 
         exampleLine.tag_delete(tagToModify)
 
-        
         tempString = ""
         for i in range(0, inputNum):
             tempString += exampleArray[i] + delimiterEntry.get()
-            print(len(tempString))
 
         exampleLine.tag_add(tagToModify, f"1.{len(tempString)}", f"1.{len(tempString) + len(exampleArray[inputNum])}")
         exampleLine.tag_config(tagToModify, background=color)
 
         return True
 
-    quizOnVal = (frame.register(lambda P: ColorQuizOn("quiz", "pink", P)), '%P')
+    quizOnVal = (frame.register(lambda P: ColValidate("quiz", "pink", P)), '%P')
 
-    quizOnEntry = tk.Entry(frame, bg=rootBGColor, fg=rootFGColor, font=smallFont, width=8, disabledbackground=rootBGColor)
-    quizOnEntry.config(validate='key', validatecommand=quizOnVal, state=tk.DISABLED, highlightthickness=0)
-    quizOnEntry.place(x=170, y=240)
+    quizOnSpinbox = tk.Spinbox(frame, state=tk.DISABLED, bg=rootBGColor, fg=rootFGColor, font=smallFont, width=8, disabledbackground=rootBGColor, validate="key", validatecommand=quizOnVal)
+    quizOnSpinbox.place(x=170, y=240)
 
     answerLabel = tk.Label(frame, text="Answer column: ", bg=rootBGColor, fg=rootDimFGColor, font=smallFont)
     answerLabel.place(x=20, y=280)
 
-    answerVal = (frame.register(lambda P: ColorQuizOn("answer", "lightblue", P)), '%P')
+    answerVal = (frame.register(lambda P: ColValidate("answer", "lightblue", P)), '%P')
 
-    answerEntry = tk.Entry(frame, bg=rootBGColor, fg=rootFGColor, font=smallFont, width=8, disabledbackground=rootBGColor)
-    answerEntry.config(validate='key', validatecommand=answerVal, state=tk.DISABLED, highlightthickness=0)
-    answerEntry.place(x=170, y=280)
+    answerSpinbox = tk.Spinbox(frame, state=tk.DISABLED, bg=rootBGColor, fg=rootFGColor, font=smallFont, width=8, disabledbackground=rootBGColor, validate="key", validatecommand=answerVal)
+    answerSpinbox.place(x=170, y=280)
+
+    def SaveData():
+        pass
+
+    submitButton = tk.Button(frame, text="Start testing", state=tk.DISABLED, highlightthickness=0, bg=rootBGColor, fg=rootFGColor, font=smallFont, command=SaveData())
+    submitButton.place(x=146, y=335)
 
 
 def SetFrame(target):
