@@ -21,7 +21,10 @@ global testingData
 testingData = []
 global delimiter
 delimiter = " : "
+global savedPath
 savedPath = ""
+global columns
+columns = [1, 2]
 
 
 global currentFrame
@@ -49,6 +52,7 @@ def IntroFrame():
 # Runs through existing flashcards until the end has been reached, at which point it will transfer to the end screen.
 def FlashcardFrame():
     global testingData
+    global columns
 
     frame = tk.Frame(root, bg=rootBGColor, height=rootY)
     frame.pack()
@@ -56,7 +60,7 @@ def FlashcardFrame():
     titleButton = tk.Button(frame, text="Back", bg=rootBGColor, fg=rootFGColor, command=lambda: SetFrame(0))
     titleButton.pack()
 
-    introLabel = tk.Label(frame, text=testingData[0][0], bg=rootBGColor, fg=rootFGColor, font=font)
+    introLabel = tk.Label(frame, text=testingData[0][columns[0]], bg=rootBGColor, fg=rootFGColor, font=font)
     introLabel.pack(pady=100, padx=78)
 
     answerLabel = tk.Label(frame, text=" ", bg=rootBGColor, fg=rootFGColor, font=font)
@@ -232,9 +236,25 @@ def SetupFrame():
     answerSpinbox.place(x=170, y=280)
 
     def SaveData():
-        pass
+        with open(os.path.join(SYSTEM_PATH, "save.txt"), "w") as saveFile:
+            global testingData
+            global delimiter
+            global savedPath
+            global columns
 
-    submitButton = tk.Button(frame, text="Start testing", state=tk.DISABLED, highlightthickness=0, bg=rootBGColor, fg=rootFGColor, font=smallFont, command=SaveData())
+            savedPath = pathEntry.get()
+
+            targetData = OpenDataFile(pathEntry.get())
+            saveFile.writelines(targetData)
+            temp = delimiterEntry.get()
+            if temp == "tab": temp = "\t"
+            delimiter = temp
+            testingData = SplitData(targetData, delimiter)
+            columns = [int(quizOnSpinbox.get()) - 1, int(answerSpinbox.get()) - 1]
+
+            SetFrame(1)
+
+    submitButton = tk.Button(frame, text="Start testing", state=tk.DISABLED, highlightthickness=0, bg=rootBGColor, fg=rootFGColor, font=smallFont, command=SaveData)
     submitButton.place(x=146, y=335)
 
 
@@ -264,7 +284,8 @@ def ClearFrame():
 # Show the correct answer and await the user's determination.
 def ShowAnswer(labelToFill, event=None):
     global testingData
-    labelToFill.config(text=testingData[0][1])
+    global columns
+    labelToFill.config(text=testingData[0][columns[1]])
 
 # ------------------------------------------------------------------------------------------------------------------------
 
