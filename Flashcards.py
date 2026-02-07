@@ -372,14 +372,13 @@ def CompileRow(dataToCompile, delimiter):
     return newData
     
 def SaveSettings():
-    global savedPath
     global delimiter
     global columns
     global correctAnswers
     global incorrectAnswers
     global testingData
 
-    linesToWrite = [ savedPath, delimiter, str(columns[0]), str(columns[1]), str(correctAnswers), str(incorrectAnswers) ]
+    linesToWrite = [ delimiter, str(columns[0]), str(columns[1]), str(correctAnswers), str(incorrectAnswers) ]
 
     file = open(os.path.join(SYSTEM_PATH, "settings.txt"), 'w', encoding="utf-8")
     for line in linesToWrite:
@@ -388,8 +387,14 @@ def SaveSettings():
 
     file = open(os.path.join(SYSTEM_PATH, "save.txt"), 'w', encoding="utf-8")
     for line in CompileRow(testingData, delimiter):
-        file.write(line + "\n")
+        file.write(line)
     file.close()
+
+def LoadSettings():
+    global delimiter
+    global columns
+    global correctAnswers
+    global incorrectAnswers
     
 # ------------------------------------------------------------------------------------------------------------------------
 
