@@ -25,6 +25,10 @@ global savedPath
 savedPath = ""
 global columns
 columns = [1, 2]
+global correctAnswers
+correctAnswers = 0
+global incorrectAnswers
+incorrectAnswers = 0
 
 
 global currentFrame
@@ -60,14 +64,44 @@ def FlashcardFrame():
     titleButton = tk.Button(frame, text="Back", bg=rootBGColor, fg=rootFGColor, command=lambda: SetFrame(0))
     titleButton.pack()
 
-    introLabel = tk.Label(frame, text=testingData[0][columns[0]], bg=rootBGColor, fg=rootFGColor, font=font)
-    introLabel.pack(pady=100, padx=78)
+    quizLabel = tk.Label(frame, text=testingData[0][columns[0]], bg=rootBGColor, fg=rootFGColor, font=font)
+    quizLabel.pack(pady=80, padx=78)
 
     answerLabel = tk.Label(frame, text=" ", bg=rootBGColor, fg=rootFGColor, font=font)
-    answerLabel.pack(pady=50, padx=78)
+    answerLabel.pack(pady=25, padx=78)
 
     instructionLabel = tk.Label(frame, text="Press LEFT if correct, or RIGHT if incorrect", bg=rootBGColor, fg=rootFGColor, font=smallFont)
-    instructionLabel.pack(pady=3)
+    instructionLabel.pack(side="bottom", pady=3)
+
+    # Show the correct answer and await the user's determination.
+    def ShowAnswer(labelToFill, event=None):
+        global testingData
+        global columns
+        labelToFill.config(text=testingData[0][columns[1]])
+        root.bind("<Left>", lambda e: Next((1, 0)))
+        root.bind("<Right>", lambda e: Next((0, 1)))
+
+    def Next(rightWrong, event=None):
+        global correctAnswers
+        global incorrectAnswers
+        
+        correctAnswers += rightWrong[0]
+        incorrectAnswers += rightWrong[1]
+
+        global testingData
+        if rightWrong[0] == 1:
+            testingData.pop(0)
+        else:
+            testingData.append(testingData.pop(0))
+        SaveSettings()
+
+
+        if len(testingData) >= 1:
+            SetFrame(1)
+        else:
+            SetFrame(0)
+        root.unbind("<Right>")
+        root.unbind("<Left>")
 
     root.bind("<Return>", lambda e: ShowAnswer(answerLabel))
 
@@ -252,6 +286,7 @@ def SetupFrame():
             testingData = SplitData(targetData, delimiter)
             columns = [int(quizOnSpinbox.get()) - 1, int(answerSpinbox.get()) - 1]
 
+            SaveSettings()
             SetFrame(1)
 
     submitButton = tk.Button(frame, text="Start testing", state=tk.DISABLED, highlightthickness=0, bg=rootBGColor, fg=rootFGColor, font=smallFont, command=SaveData)
@@ -280,12 +315,6 @@ def SetFrame(target):
 def ClearFrame():
     for child in root.winfo_children():
         child.destroy()
-
-# Show the correct answer and await the user's determination.
-def ShowAnswer(labelToFill, event=None):
-    global testingData
-    global columns
-    labelToFill.config(text=testingData[0][columns[1]])
 
 # ------------------------------------------------------------------------------------------------------------------------
 
@@ -326,6 +355,41 @@ def VerifyColumnCount(array):
         return isValid
     except:
         return False
+    
+def CompileRow(dataToCompile, delimiter):
+    newData = []
+    for row in dataToCompile:
+        wordCount = 0
+        tempString = ""
+        for data in row:
+            wordCount += 1
+            if wordCount != len(row):
+                tempString += data + delimiter
+            else:
+                tempString += data
+        newData.append(tempString)
+
+    return newData
+    
+def SaveSettings():
+    global savedPath
+    global delimiter
+    global columns
+    global correctAnswers
+    global incorrectAnswers
+    global testingData
+
+    linesToWrite = [ savedPath, delimiter, str(columns[0]), str(columns[1]), str(correctAnswers), str(incorrectAnswers) ]
+
+    file = open(os.path.join(SYSTEM_PATH, "settings.txt"), 'w', encoding="utf-8")
+    for line in linesToWrite:
+        file.write(line + "\n")
+    file.close()
+
+    file = open(os.path.join(SYSTEM_PATH, "save.txt"), 'w', encoding="utf-8")
+    for line in CompileRow(testingData, delimiter):
+        file.write(line + "\n")
+    file.close()
     
 # ------------------------------------------------------------------------------------------------------------------------
 
