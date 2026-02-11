@@ -305,6 +305,7 @@ def SetFrame(target):
     # Flashcards
     elif target == 1:
         ClearFrame()
+        LoadSettings()
         FlashcardFrame()
     elif target == 2:
         ClearFrame()
@@ -382,12 +383,12 @@ def SaveSettings():
 
     file = open(os.path.join(SYSTEM_PATH, "settings.txt"), 'w', encoding="utf-8")
     for line in linesToWrite:
-        file.write(line + "\n")
+        file.write(line.replace('\n', '') + "\n")
     file.close()
 
     file = open(os.path.join(SYSTEM_PATH, "save.txt"), 'w', encoding="utf-8")
     for line in CompileRow(testingData, delimiter):
-        file.write(line)
+        file.write(line.replace('\n', '') + '\n')
     file.close()
 
 def LoadSettings():
@@ -395,6 +396,12 @@ def LoadSettings():
     global columns
     global correctAnswers
     global incorrectAnswers
+
+    with open(os.path.join(SYSTEM_PATH, "settings.txt")) as file:
+        array = file.readlines()
+        delimiter = array[0]
+        columns = [int(array[1]), int(array[2])]
+        correctAnswers = int(array[3])
     
 # ------------------------------------------------------------------------------------------------------------------------
 
